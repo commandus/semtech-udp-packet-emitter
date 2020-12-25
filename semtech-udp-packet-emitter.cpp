@@ -16,7 +16,7 @@
 #include <arpa/inet.h>
 #include <limits.h>
 #include <errno.h>
- #include <cstdlib>
+#include <cstdlib>
 
 #include "argtable3/argtable3.h"
 #include "platform.h"
@@ -24,13 +24,24 @@
 #include "daemonize.h"
 
 #include "errlist.h"
+#include "utillora.h"
+#include "utilstring.h"
 
 const std::string progname = "semtech-udp-packet-emitter";
 #define DEF_CONFIG_FILE_NAME ".semtech-udp-packet-emitter"
-#define DEF_TIME_FORMAT      "%F %T"
+#define DEF_TIME_FORMAT      "%FT%T"
 
 #define DEF_BUFFER_SIZE     4096
 #define DEF_BUFFER_SIZE_S   "4096"
+
+class PacketOptions {
+  public:
+    int frameCounter;
+    PacketOptions() 
+      : frameCounter(0)
+    {
+    }
+};
 
 class UDPSocket {
   public:
@@ -167,11 +178,11 @@ class UDPEmitter {
     ) {
       fd_set s;
       FD_ZERO(&s);
-      FD_SET(sockets[0].socket, &s);
+      FD_SET(mSocket.socket, &s);
       struct timeval timeout;
       timeout.tv_sec = max_wait_s;
       timeout.tv_usec = 0;
-      int retval = select(sockets[0].socket + 1, &s, &s, &s, &timeout);
+      int retval = select(mSocket.socket + 1, &s, &s, &s, &timeout);
       if (retval == -1) {
           // select() set errno accordingly
           return -1;
@@ -179,7 +190,7 @@ class UDPEmitter {
       if (retval > 0) {
           // our socket has data
           socklen_t addrlen = sizeof(struct sockaddr_in); 
-          return recvfrom(sockets[0].socket, (void *) buffer.c_str(), buffer.size(), 0, (struct sockaddr *) remotePeerAddr, &addrlen);
+          return recvfrom(mSocket.socket, (void *) buffer.c_str(), buffer.size(), 0, (struct sockaddr *) remotePeerAddr, &addrlen);
       }
 
       // our socket has no data
@@ -206,7 +217,7 @@ class UDPEmitter {
           << " -> " << inet_ntoa(s->sin_addr) << ":" << ntohs(s->sin_port) << std::endl;
       }
 
-      size_t r = sendto(mSocket.socket, buffer.c_str(), size, 0, it->addr.ai_addr, it->addr.ai_addrlen);
+      size_t r = sendto(mSocket.socket, buffer.c_str(), size, 0, mSocket.addr.ai_addr, mSocket.addr.ai_addrlen);
       if (r < 0)
         return r;
       return 0;
@@ -239,7 +250,7 @@ static void done()
  // destroy and free all
   emitter.closeSocket();
   if (emitter.verbosity > 1)
-    std::cerr << "Semtech UDP packet emitter closed gracefully" << std::endl;
+    std::cerr << "Semtech UDP packet emitter socket closed gracefully" << std::endl;
   exit(0);
 }
 
@@ -294,6 +305,7 @@ time_t time_ms(int &ms) {
 int parseCmd
 (
   UDPEmitter &emitter,
+  PacketOptions &packetOptions,
 	int argc,
 	char* argv[]
 )
@@ -301,6 +313,9 @@ int parseCmd
   // device path
   struct arg_str *a_address = arg_str1(NULL, NULL, "<host:port>", "destination host name or address and port");
   struct arg_int *a_size = arg_int0("s", "size", "<size>", "buffer size. Default " DEF_BUFFER_SIZE_S);
+
+  struct arg_int *a_frame_counter = arg_int0(NULL, "frame-counter", "<number>", "frame counter. Default 0");
+  
   struct arg_str *a_logfilename = arg_str0("l", "logfile", "<file>", "log file");
   struct arg_lit *a_daemonize = arg_lit0("d", "daemonize", "run daemon");
   struct arg_lit *a_verbosity = arg_litn("v", "verbose", 0, 3, "Set verbosity level");
@@ -308,7 +323,9 @@ int parseCmd
 	struct arg_end *a_end = arg_end(20);
 
 	void* argtable[] = { 
-		a_address, a_size, a_logfilename, a_daemonize, a_verbosity, a_help, a_end 
+		a_address, a_size,
+    a_frame_counter,
+    a_logfilename, a_daemonize, a_verbosity, a_help, a_end 
 	};
 
 	int nerrors;
@@ -332,6 +349,10 @@ int parseCmd
     } else {
       emitter.setBufferSize(sz);
     }
+  }
+
+  if (a_frame_counter->count) {
+    packetOptions.frameCounter = *a_frame_counter->ival;
   }
 
   if (a_logfilename->count) {
@@ -407,13 +428,33 @@ int main(
   int argc,
 	char* argv[]
 ) {
-  if (parseCmd(emitter, argc, argv) != 0) {
+  PacketOptions packetOptions;
+  if (parseCmd(emitter, packetOptions, argc, argv) != 0) {
     exit(ERR_CODE_COMMAND_LINE);  
   }
 #ifdef _MSC_VER
 #else  
   setSignalHandler();
 #endif
+
+  unsigned int frameCounterTx = 0;
+  semtechUDPPacket packet;
+  packet.setGatewayId("00006cc3743eed46");
+  
+  packet.setDeviceEUI("1122334455667788");
+  packet.setDeviceAddr("11111111");
+  packet.setNetworkSessionKey("11111111111111111111111111111111");
+  packet.setApplicationSessionKey("11111111111111111111111111111111");
+  packet.setFrameCounter(packetOptions.frameCounter);
+  // packet.payload = "123";
+  packet.payload = "";
+
+  std::cerr << "GW:  " <<  deviceEui2string(packet.prefix.mac) << std::endl;
+  std::cerr << "EUI: " << deviceEui2string(packet.deviceEUI) << std::endl;
+  std::cerr << "RFM packet: " << hexString(packet.serialize2RfmPacket()) << std::endl;
+  std::cout << packet.toString() << std::endl;
+  
+  exit(0);
 
 	if (emitter.daemonize) {
 		char wd[PATH_MAX];

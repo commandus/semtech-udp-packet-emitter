@@ -17,16 +17,18 @@ CLEANFILES = $(GEN)
 bin_PROGRAMS = semtech-udp-packet-emitter
 
 nobase_dist_include_HEADERS = \
-	platform.h utilstring.h \
+	platform.h utilstring.h utildate.h strptime.h \
+	errlist.h daemonize.h aes-128.h \
 	third_party/argtable3/argtable3.h \
-	errlist.h daemonize.h aes-128.h
+	third_party/base64/base64.h
 
 commonlibs = -L/usr/local/lib 
 
 semtech_udp_packet_emitter_SOURCES = \
 	semtech-udp-packet-emitter.cpp errlist.cpp daemonize.cpp \
-	utilstring.cpp aes-128.c \
-	third_party/argtable3/argtable3.c
+	utilstring.cpp utildate.cpp strptime.cpp utillora.cpp aes-128.c \
+	third_party/argtable3/argtable3.c \
+	third_party/base64/base64.cpp
 
 semtech_udp_packet_emitter_LDADD = $(commonlibs)
 semtech_udp_packet_emitter_CPPFLAGS = $(commoncppflags)

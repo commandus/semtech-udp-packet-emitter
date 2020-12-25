@@ -6,6 +6,7 @@ Simple program to send UPD packets
 
 ```
 semtech-udp-packet-emitter 84.237.104.128:2000
+semtech-udp-packet-emitter 84.237.104.128:2000 --frame-counter 1 | nc -u -w 0 84.237.104.128 1700
 ```
 
 ## Build
@@ -14,7 +15,7 @@ automake:
 
 ```
 autogen.sh
-./confiugure
+./configure
 make
 sudo make install
 ```
