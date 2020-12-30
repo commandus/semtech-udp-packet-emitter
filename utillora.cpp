@@ -303,8 +303,8 @@ rfmHeader::rfmHeader(
 	header.macheader = 0x40;
 	memcpy(&header.devaddr, &addr, sizeof(DEVADDR));
 	header.framecountertx = frameCounter;
-	header.framecontrol = 0;
-	header.frameport = 0;
+	header.framecontrol = frameControl;
+	header.frameport = framePort;
 }
 
 rfmHeader::rfmHeader(
@@ -331,10 +331,15 @@ semtechUDPPacket::semtechUDPPacket()
 	prefix.token = 0;
 	prefix.tag = 0;
 
-	frameCounter = 0;
+	header.header.macheader = 0x40;
+	memset(&header.header.devaddr, 0, sizeof(DEVADDR));			// MAC address
+
+	header.header.framecontrol = 0;
+	header.header.framecountertx = 0;
+	header.header.frameport = 0;
+	memset(&header.header.devaddr, 0, sizeof(DEVADDR));
 	
 	memset(&deviceEUI, 0, sizeof(DEVUEI));
-	memset(&deviceAddr, 0, sizeof(DEVADDR));
 	memset(&nwkSKey, 0, sizeof(KEY128));
 	memset(&appSKey, 0, sizeof(KEY128));
 
@@ -369,6 +374,21 @@ std::string jsonPackage(
 	return ss.str();
 }
 
+RFM_HEADER *semtechUDPPacket::getRfmHeader() {
+	
+	return &header.header;
+}
+
+rfmHeader *semtechUDPPacket::getHeader() {
+	return &header;
+}
+
+void semtechUDPPacket::setRfmHeader(
+	const RFM_HEADER &value
+) {
+	header = rfmHeader(value);
+}
+
 /**
  * prefix  Gateway-MAC-addr RFM-header
  * 0 1 2 3 4 5 6 7 8 9 A B  C                 DAT mic  
@@ -386,22 +406,19 @@ std::string semtechUDPPacket::serialize2RfmPacket()
 
 	// direction of frame is up
 	unsigned char direction = 0x00;
-	unsigned char frameControl = 0x00;
-	unsigned char framePort = 0x01;
 
 	// build radio packet, unconfirmed data up macHeader = 0x40;
 	// RFM header 9 bytes
-	rfmHeader header(deviceAddr, frameCounter, frameControl, framePort);
 	ss << header.toString();
 
 	// load data
 	// encrypt data
-	encryptPayload(p, frameCounter, direction, deviceAddr, appSKey);
+	encryptPayload(p, header.header.framecountertx, direction, header.header.devaddr, appSKey);
 	ss << p;
 
 	std::string rs = ss.str();
 	// calc MIC
-	uint32_t mic = calculateMIC(rs, frameCounter, direction, deviceAddr, nwkSKey);	// nwkSKey
+	uint32_t mic = calculateMIC(rs, header.header.framecountertx, direction, header.header.devaddr, nwkSKey);	// nwkSKey
 	// load MIC in package
 	// mic = ntoh4(mic);
 	ss << std::string((char *) &mic, 4);
@@ -434,7 +451,7 @@ void semtechUDPPacket::setDeviceEUI(
 void semtechUDPPacket::setDeviceAddr(
 	const std::string &value
 ) {
-	setAddr(deviceAddr, value);
+	setAddr(header.header.devaddr, value);
 }
 
 void semtechUDPPacket::setNetworkSessionKey(
@@ -452,7 +469,15 @@ void semtechUDPPacket::setApplicationSessionKey(
 void semtechUDPPacket::setFrameCounter(
 	uint16_t value
 ) {
-	frameCounter = value;
+	header.header.framecountertx = value;
+}
+
+int semtechUDPPacket::setPayload(
+	uint8_t port,
+	const std::string &value
+) {
+	header.header.frameport = port;
+	payload = value;
 }
 
 /**

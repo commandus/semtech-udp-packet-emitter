@@ -48,9 +48,9 @@ public:
 
 class rfmHeader {
 private:
-	RFM_HEADER header;
 	void ntoh();
 public:	
+	RFM_HEADER header;
 	rfmHeader();
 	rfmHeader(
 		const RFM_HEADER &header
@@ -77,18 +77,22 @@ class semtechUDPPacket {
 private:
 	rfmMetaData metadata;
 	rfmHeader header;
-	uint32_t frameCounter;
+	std::string payload;
+
 public:	
 	SEMTECH_LORA_PREFIX prefix;
 	DEVUEI deviceEUI;
-	DEVADDR deviceAddr;
 	KEY128 nwkSKey;
 	KEY128 appSKey;
-	std::string payload;
 
 	semtechUDPPacket();
 	std::string serialize2RfmPacket();
 	std::string toString();
+
+	RFM_HEADER *getRfmHeader();
+	rfmHeader *getHeader();
+	void setRfmHeader(const RFM_HEADER &value);
+
 	/*
 	uint16_t getFrameCounter();
 	void setFrameCounter(uint16_t value);
@@ -100,6 +104,7 @@ public:
 	void setNetworkSessionKey(const std::string &value);
 	void setApplicationSessionKey(const std::string &value);
 	void setFrameCounter(uint16_t value);
+	int setPayload(uint8_t port, const std::string &payload);
 };
 
 /**

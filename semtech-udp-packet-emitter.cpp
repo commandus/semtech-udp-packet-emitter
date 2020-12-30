@@ -446,13 +446,15 @@ int main(
   packet.setNetworkSessionKey("11111111111111111111111111111111");
   packet.setApplicationSessionKey("11111111111111111111111111111111");
   packet.setFrameCounter(packetOptions.frameCounter);
-  // packet.payload = "123";
-  packet.payload = "";
-
+  packet.setPayload(1, "123");
+  
   std::cerr << "GW:  " <<  deviceEui2string(packet.prefix.mac) << std::endl;
   std::cerr << "EUI: " << deviceEui2string(packet.deviceEUI) << std::endl;
   std::cerr << "RFM packet: " << hexString(packet.serialize2RfmPacket()) << std::endl;
   std::cout << packet.toString() << std::endl;
+
+  // handleUplinkMACCommands
+  // 401111111100000000a1a46f3b80a8eb a1 a4 6f 3b 80 a8 eb
   
   exit(0);
 
