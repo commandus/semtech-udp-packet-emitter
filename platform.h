@@ -22,22 +22,13 @@
 #endif
 
 #if BYTE_ORDER == BIG_ENDIAN
-uint16_t ntoh2(uint16_t v) {
-	return v;
-}
-uint32_t ntoh4(uint32_t v) {
-	return v;
-}
-uint64_t ntoh8(uint32_t v) {
-	return v;
-}
+#define ntoh2(x) (x)
+#define ntoh4(x) (x)
+#define ntoh8(x) (x)
 #else
-#define ntoh2 be16toh
-
-#define ntoh4 be32toh
-
-#define ntoh8 be64toh
-
+#define ntoh2(x) be16toh(x)
+#define ntoh4(x) be32toh(x)
+#define ntoh8(x) be64toh(x)
 #endif
 
 #endif
