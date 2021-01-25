@@ -51,7 +51,7 @@ time_t parseDate(const char *v)
 	return r;
 }
 
-time_t time_ms(int &ms, int&) {
+time_t time_ms(int &ms) {
 	struct timeval tp;
 	gettimeofday(&tp, NULL);
 	ms = tp.tv_usec / 1000;

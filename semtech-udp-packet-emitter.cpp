@@ -289,13 +289,6 @@ void setSignalHandler()
 }
 #endif
 
-time_t time_ms(int &ms) {
-  struct timeval tp;
-  gettimeofday(&tp, NULL);
-  ms = tp.tv_usec / 1000;
-  return tp.tv_sec;
-}
-
 /**
  * Parse command line
  * Return 0- success
@@ -406,7 +399,7 @@ static void run()
     switch (r)
     {
     case ERR_CODE_COMMAND_LINE:
-      std::cerr << ERROR << r << ": " << strerror_udpemitter(r) << std::endl;
+      std::cerr << ERROR << r << ": " << strerror_client(r) << std::endl;
       break;
     case -1:  // timeout
       break;
@@ -437,7 +430,6 @@ int main(
   setSignalHandler();
 #endif
 
-  unsigned int frameCounterTx = 0;
   semtechUDPPacket packet;
   packet.setGatewayId("00006cc3743eed46");
   

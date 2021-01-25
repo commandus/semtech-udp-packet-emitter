@@ -6,6 +6,22 @@
 #include <sstream>
 #include <streambuf>
 #include <iomanip>
+#include <fstream>
+
+static std::string file2string(std::istream &strm)
+{
+	if (!strm)
+		return "";
+	return std::string((std::istreambuf_iterator<char>(strm)), std::istreambuf_iterator<char>());
+}
+
+std::string file2string(const char *filename)
+{
+	if (!filename)
+		return "";
+	std::ifstream t(filename);
+	return file2string(t);
+}
 
 // http://stackoverflow.com/questions/673240/how-do-i-print-an-unsigned-char-as-hex-in-c-using-ostream
 struct HexCharStruct
@@ -94,4 +110,26 @@ std::string stringFromHex(const std::string &hex)
 		i++;
 	}
 	return r;
+}
+
+/**
+ * @see https://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
+ */
+// trim from start
+static inline std::string &ltrim(std::string &s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(),
+            std::not1(std::ptr_fun<int, int>(std::isspace))));
+    return s;
+}
+
+// trim from end
+static inline std::string &rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(),
+            std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+    return s;
+}
+
+// trim from both ends
+std::string &trim(std::string &s) {
+    return ltrim(rtrim(s));
 }
